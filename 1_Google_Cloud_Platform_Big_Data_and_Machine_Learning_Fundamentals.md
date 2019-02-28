@@ -30,10 +30,13 @@ Custom/changeable machine types, preemptible machines, and automatic discount
 
 ## Compute engine SSH:
 - Create into the console || gcloud instances create
-- cat /proc/cpuinfo
-- sudo apt-get update
-- sudo apt-get -y -qq install git
-- git --version
+
+```bash
+cat /proc/cpuinfo
+sudo apt-get update
+sudo apt-get -y -qq install git
+git --version
+```
 
 ## Storage
 cp, mv, ls, rm, 
@@ -50,11 +53,14 @@ ACL: Access Control List
 
 ## Cloud SQL
 ### GCloud Shell
-- gcloud auth list
-- gcloud config list project
+```bash
+gcloud auth list
+gcloud config list project
+```
+
 - Table creation
 
-
+```SQL
 USE recommendation_spark;
 
 DROP TABLE IF EXISTS Recommendation;
@@ -93,9 +99,12 @@ CREATE TABLE  IF NOT EXISTS Recommendation
   FOREIGN KEY (accoId)
     REFERENCES Accommodation(id)
 );
+```
 
 ### In the sql database connection
+```SQL
 select * from Accommodation where type = 'castle' and price < 1500;
+```
 
 ## Managed Hadoop in the cloud
 - Hadoop
@@ -104,27 +113,39 @@ select * from Accommodation where type = 'castle' and price < 1500;
 - Spark
 
 ## Kubernetes best practices
-- gcloud container clusters create myCluster
-- gcloud builds submit --tag gcr.io/[PROJECT_ID]/quickstart-image .
-- or
-- gcloud builds submit --config cloudbuild.yaml .
+```bash
+gcloud container clusters create myCluster
+```
+```bash
+gcloud builds submit --tag gcr.io/[PROJECT_ID]/quickstart-image .
+```
+or
+```bash
+gcloud builds submit --config cloudbuild.yaml .
+```
+
 
 ## Datalab
-- gcloud compute zones list
-- datalab create my-datalab-vm --machine-type n1-highmen-8 --zone us-central1-a
+```bash
+gcloud compute zones list
+datalab create my-datalab-vm --machine-type n1-highmen-8 --zone us-central1-a
+```
 
+```python
 import google.datalab.bigquery as bq
 import pandas as pd
 import numpy as np
 import shutil
+```
 
+```bash
 %bq tables describe --name bigquery-public-data.new_york.tlc_yellow_trips_2015
-
+```
 ## 
 
+```bash
 %bq query
-SELECT 
-  EXTRACT (DAYOFYEAR from pickup_datetime) AS daynumber
+SELECT EXTRACT (DAYOFYEAR from pickup_datetime) AS daynumber
 FROM `bigquery-public-data.new_york.tlc_yellow_trips_2015` 
 LIMIT 5
 
@@ -261,7 +282,7 @@ estimator = tf.contrib.learn.LinearRegressor(model_dir='./trained_model_linear',
 
 pred = np.multiply(list(estimator.predict(input.values)), SCALE_NUM_TRIPS )
 print(pred)
-
+```
 
 ## Machine Learning APIs
 
@@ -273,20 +294,21 @@ print(pred)
 - Translation API
 
 ### Translate API
-
-# running Translate API
+```python
+# Running Translate API
 from googleapiclient.discovery import build
 service = build('translate', 'v2', developerKey=APIKEY)
 
-##### use the service
+### use the service
+
 inputs = ['is it really this easy?', 'amazing technology', 'wow']
 outputs = service.translations().list(source='en', target='fr', q=inputs).execute()
-##### print outputs
+## print outputs
 for input, output in zip(inputs, outputs['translations']):
   print("{0} -> {1}".format(input, output['translatedText']))
-
+```
 ### Vision API
-
+```python
 # Running Vision API
 import base64
 IMAGE="gs://cloud-training-demos/vision/sign2.jpg"
@@ -340,8 +362,10 @@ for quote in quotes:
   magnitude = response['documentSentiment']['magnitude']
   print('POLARITY=%s MAGNITUDE=%s for %s' % (polarity, magnitude, quote))
 
-### Speech API
+```
 
+### Speech API
+// TODO
 
 ## Pub/Sub
 
@@ -350,27 +374,29 @@ for quote in quotes:
 
 ## Serverless data pipelines
 
-- p = beam.Pipeline(options)
-- lines = p | beam.io.ReadFromText('gs://...')
-- traffic = lines | beam.Map(parse_data).with_output_types(unicode)
+```python
+p = beam.Pipeline(options)
+lines = p | beam.io.ReadFromText('gs://...')
+traffic = lines | beam.Map(parse_data).with_output_types(unicode)
                   | beam.Map(get_speedbysensor) # (sensor, speed)
                   | beam.GroupByKey() # (sensor, [speed])
                   | beam.Map(avg_speed) # (sensor, avgspeed)
                   | beam.Map(lambda tup: '%s: %d' % tup))
-- output = traffic | beam.io.WriteToText('gs://...')
-- p.run()
+output = traffic | beam.io.WriteToText('gs://...')
+p.run()
 
 ### Same code does real-time and batch, injesting data from Pub/Sub
 
-- options = PipelineOptions(pipeline_args)
-- options.view_as(StandardOptions).streaming = True
-- p = beam.Pipeline(options = options)
-- lines = p | beam.io.ReadStringsFromPubSub(input_topic)
-- traffic = lines | beam.Map(parse_data).with_output_types(unicode)
+options = PipelineOptions(pipeline_args)
+options.view_as(StandardOptions).streaming = True
+p = beam.Pipeline(options = options)
+lines = p | beam.io.ReadStringsFromPubSub(input_topic)
+traffic = lines | beam.Map(parse_data).with_output_types(unicode)
                   | beam.Map(get_speedbysensor) # (sensor, speed)
                   | beam.WindowInto(window.FixedWindow(15, 0))
                   | beam.GroupByKey() # (sensor, [speed])
                   | beam.Map(avg_speed) # (sensor, avgspeed)
                   | beam.Map(lambda tup: '%s: %d' % tup))
-- output = traffic | beam.io.WriteStringsToPubSub(output_topic)
-- p.run()
+output = traffic | beam.io.WriteStringsToPubSub(output_topic)
+p.run()
+```

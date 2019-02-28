@@ -14,10 +14,14 @@ It is able to mix different kinds of applications and to adjust how it uses the 
 Hadoop only => Lot of overhead, for reconfiguring, scaling can take days or weeks, moving data around which has no value to the business
 Dataproc => Managed Hadoop and Spark Clusters => Focus only on insight and analytics for driving better decisions for the company
 
+```bash
 gcloud dataproc clusters create my-cluster --zone us-central1-a --master-machine-type n1-standard-1 --num-workers 2 --master-boot-disk-size 50 --num-worker 2 --worker-machine-type n1-standard-1 --worker-boot-disk-size 50
+```
 
+```bash
 gcloud dataproc --help
 gcloud dataproc clusters create --help
+```
 
 9870: Hadoop Admin Interface
 8088: Hadoop Jobs or Applications Interface
@@ -36,12 +40,18 @@ gcloud dataproc clusters create --help
 
 Stage data in HDFS
 
+```bash
 hadoop fs -mkdir /pet-details
 hadoop fs -put pet-details.txt /pet-details
+```
 
 ### Hive
 
+```bash
 hive
+```
+
+```SQL
 CREATE DATABASE pets;
 use pets;
 
@@ -52,8 +62,11 @@ DESCRIBE pets.details;
 load data INPATH '/pet-details/pet-details.txt' OVERWRITE INTO TABLE details;
 
 SELECT \* FROM pets.details;
+```
 
+```bash
 quit;
+```
 
 Hive ==>
 
@@ -64,6 +77,7 @@ Hive ==>
 
 ### Pig
 
+```bash
 cat pet-details.pig
 
 rmf /GroupedByType
@@ -79,6 +93,8 @@ pig < pet-details.pig
 hadoop fs -get /GroupByType/part\* .
 
 cat part-r-00000
+
+```
 
 Pig ==
 
@@ -115,9 +131,15 @@ Transformations(map, flatMap) => stores them in the DAG versus Actions (collect,
 
 ### Spark
 
-- hadoop fs -ls /
+```bash
+hadoop fs -ls /
+```
 
+```bash
 pyspark
+```
+
+```python
 lines = sc.textFile("/sampledata/sherlock-holmes.txt")
 type(lines) # <class 'pyspark.rdd.RDD'>
 lines.count()lines.take(15)
@@ -161,18 +183,22 @@ output = wordsize.sortByKey().collect()
 ## With spark optimizations
 
 output2 = lines
-.flatMap(lambda x: x.split(' '))
-.map(lambda x: (len(x),1))
-.reduceByKey(add)
-.sortByKey()
-.collect()
+  .flatMap(lambda x: x.split(' '))
+  .map(lambda x: (len(x),1))
+  .reduceByKey(add)
+  .sortByKey()
+  .collect()
 
 for (size, count) in output2: print(size, count)
+```
 
+```bash
 exit()
+```
 
 ## Spark script in nano wordcount.py
 
+```python
 from pyspark.sql import SparkSession
 from operator import add
 import re
@@ -197,15 +223,21 @@ for (word, count) in output:
 print("%s = %i" % (word, count))
 
 spark.stop()
+```
 
 ## Submit the job
 
+```bash
 spark-submit wordcount.py
+```
 
 ## Replace HDFS with GCS
 
+```bash
 gsutil cp /training/road-not-taken.txt gs://\$BUCKET
+```
 
+```python
 from pyspark.sql import SparkSession
 from operator import add
 import re
@@ -232,8 +264,11 @@ print("%s = %i" % (word, count))
 spark.stop()
 
 lines = spark.read.text("gs://<YOUR-BUCKET>/road-not-taken.txt").rdd.map(lambda x: x[0])
+```
 
+```bash
 spark-submit wordcount.py
+```
 
 ## Installation script
 
@@ -241,16 +276,19 @@ spark-submit wordcount.py
 
 #### install Google Python client on all nodes
 
-apt-get update
+```bash
+apt-get update || true
 apt-get install -y python-pip
 pip install --upgrade google-api-python-client
 ROLE=$(/usr/share/google/get_metadata_value attributes/dataproc-role)
 if [[ "${ROLE}" == 'Master' ]]; then
-echo "Only on master node ..."
+  echo "Only on master node ..."
 fi
+```
 
 ## Create the custom cluster
 
+```bash
 gcloud dataproc clusters create cluster-custom \
 --bucket $BUCKET \
 --subnet default \
@@ -267,9 +305,11 @@ gcloud dataproc clusters create cluster-custom \
 --tags customaccess \
 --project $PROJECT_ID \
 --initialization-actions 'gs://'\$BUCKET'/init-script.sh','gs://dataproc-initialization-actions/datalab/datalab.sh'
+```
 
 ## Create a firewall rule
 
+```bash
 gcloud compute \
 --project=$PROJECT_ID \
 firewall-rules create allow-custom \
@@ -280,56 +320,59 @@ firewall-rules create allow-custom \
 --rules=tcp:9870,tcp:8088,tcp:8080 \
 --source-ranges=$BROWSER_IP/32 \
 --target-tags=customaccess
+```
 
 ## Machine Learning
 
 ### stagelabs.sh
 
-if [ -d "backup" ]; then
-cp backup/_dataproc_ .
+```bash
+if [[ -d "backup" ]; then
+  cp backup/_dataproc_ .
 else
-mkdir backup
-cp _dataproc_ backup
+  mkdir backup
+  cp _dataproc_ backup
 fi
 
 # Verify that the environment variables exist
 
-#
-
 OKFLAG=1
 if [[ -v $BUCKET ]]; then
-echo "BUCKET environment variable not found"
+  echo "BUCKET environment variable not found"
 OKFLAG=0
 fi
 if [[ -v $DEVSHELL_PROJECT_ID ]]; then
-echo "DEVSHELL_PROJECT_ID environment variable not found"
+  echo "DEVSHELL_PROJECT_ID environment variable not found"
 OKFLAG=0
 fi
 if [[ -v $APIKEY ]]; then
-echo "APIKEY environment variable not found"
+  echo "APIKEY environment variable not found"
 OKFLAG=0
 fi
 
 if [ OKFLAG==1 ]; then
 
-#### Edit the script files
+  #### Edit the script files
 
-sed -i "s/your-api-key/$APIKEY/" *dataprocML.py
+  sed -i "s/your-api-key/$APIKEY/" *dataprocML.py
   sed -i "s/your-project-id/$DEVSHELL_PROJECT_ID/" *dataprocML.py
-sed -i "s/your-bucket/\$BUCKET/" *dataprocML.py
+  sed -i "s/your-bucket/\$BUCKET/" *dataprocML.py
 
-#### Copy python scripts to the bucket
+  #### Copy python scripts to the bucket
 
-gsutil cp \*dataprocML.py gs://\$BUCKET/
+  gsutil cp \*dataprocML.py gs://\$BUCKET/
 
-#### Copy data to the bucket
+  #### Copy data to the bucket
 
-gsutil cp gs:\/\/cloud-training\/gcpdei\/road* gs:\/\/\$BUCKET\/sampledata\/
-gsutil cp gs:\/\/cloud-training\/gcpdei\/time* gs:\/\/\$BUCKET\/sampledata\/
+  gsutil cp gs:\/\/cloud-training\/gcpdei\/road* gs:\/\/\$BUCKET\/sampledata\/
+  gsutil cp gs:\/\/cloud-training\/gcpdei\/time* gs:\/\/\$BUCKET\/sampledata\/
 
 fi
+```
 
 ### 03-dataprocML.py
+
+```python
 
 '''
 This program reads a text file and passes to a Natural Language Processing
@@ -356,65 +399,50 @@ BUCKET="qwiklabs-gcp-1dea41827e59f364" # CHANGE
 ## Wrappers around the NLP REST interface
 
 def SentimentAnalysis(text):
-from googleapiclient.discovery import build
-lservice = build('language', 'v1beta1', developerKey=APIKEY)
-response = lservice.documents().analyzeSentiment(
-body={
-'document': {
-'type': 'PLAIN_TEXT',
-'content': text
-}
-}).execute()
+  from googleapiclient.discovery import build
 
-return response
+  lservice = build('language', 'v1beta1', developerKey=APIKEY)
+  response = lservice.documents().analyzeSentiment(
+  body={
+    'document': {
+    'type': 'PLAIN_TEXT',
+    'content': text
+  }
+  }).execute()
 
-##### main
+  return response
 
-#### We could use sc.textFiles(...)
+## main
 
-####
-
-#### However, that will read each line of text as a separate object.
-
-#### And using the REST API to NLP for each line will rapidly exhaust the rate-limit quota
-
-#### producing HTTP 429 errors
-
-####
-
-#### Instead, it is more efficient to pass an entire document to NLP in a single call.
-
-####
-
-#### So we are using sc.wholeTextFiles(...)
-
-####
-
-#### This provides a file as a tuple.
-
-#### The first element is the file pathname, and second element is the content of the file.
-
-####
+# We could use sc.textFiles(...)
+#
+# However, that will read each line of text as a separate object.
+# And using the REST API to NLP for each line will rapidly exhaust the rate-limit quota
+# producing HTTP 429 errors
+#
+# Instead, it is more efficient to pass an entire document to NLP in a single call.
+#
+# So we are using sc.wholeTextFiles(...)
+#
+# This provides a file as a tuple.
+# The first element is the file pathname, and second element is the content of the file.
+#
 
 sample = sc.wholeTextFiles("gs://{0}/sampledata/time-machine.txt".format(BUCKET))
 
-#### Calling the Natural Language Processing REST interface
-
-####
-
-#### results = SentimentAnalysis(sampleline)
+# Calling the Natural Language Processing REST interface
+#
+# results = SentimentAnalysis(sampleline)
 
 rdd1 = sample.map(lambda x: SentimentAnalysis(x[1]))
 
-#### The RDD contains a dictionary, using the key 'sentences' picks up each individual sentence
-
-#### The value that is returned is a list. And inside the list is another dictionary
-
-#### The key 'sentiment' produces a value of another list.
-
-#### And the keys magnitude and score produce values of floating numbers.
-
-####
+# The RDD contains a dictionary, using the key 'sentences' picks up each individual sentence
+# The value that is returned is a list. And inside the list is another dictionary
+# The key 'sentiment' produces a value of another list.
+# And the keys magnitude and score produce values of floating numbers.
+#
 
 rdd2 = rdd1.flatMap(lambda x: x['sentences'] )\
  .flatMap(lambda x: [(x['sentiment']['magnitude'], x['sentiment']['score'], [x['text']['content']])] )
+
+```
