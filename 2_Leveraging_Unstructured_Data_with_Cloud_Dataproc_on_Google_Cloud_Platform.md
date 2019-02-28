@@ -5,7 +5,7 @@
 - 1 PetaByte == 12 Empire state buildings == Every tweet ever tweeted \* 50 == 27 years to download over 4G
   == 2 micrograms of DNA == 1day's worth of video uploaded to youtube == 200 servers logging at 50 entries per second for 3 years
 - Horizontal scaling (scale out) vs Vertical scaling (scale up)
-  50000 images hosted in GCS => (5s o processing for each image) ==> 17 days ==> 4 core CPU => 4.5days ==> 100 computers in parallel ==> 4hours ==> 1000 computers ==> 25min and so on !! Yeah horizontal scaling
+  50000 images hosted in GCS => (5s of processing for each image) ==> 17 days ==> 4 core CPU => 4.5days ==> 100 computers in parallel ==> 4hours ==> 1000 computers ==> 25min and so on !! Yeah horizontal scaling
 
 ## Spark
 

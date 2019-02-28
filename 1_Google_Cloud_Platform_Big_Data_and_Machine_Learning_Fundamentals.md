@@ -143,7 +143,7 @@ import shutil
 ```
 ## 
 
-```bash
+```SQL
 %bq query
 SELECT EXTRACT (DAYOFYEAR from pickup_datetime) AS daynumber
 FROM `bigquery-public-data.new_york.tlc_yellow_trips_2015` 
@@ -157,7 +157,9 @@ WITH trips AS (
 )
 SELECT daynumber, COUNT(1) AS numtrips FROM trips
 GROUP BY daynumber ORDER BY daynumber
+```
 
+```python
 query_parameters = [
   {
     'name': 'YEAR',
@@ -167,9 +169,11 @@ query_parameters = [
 ]
 trips = taxiquery.execute(query_params=query_parameters).result().to_dataframe()
 trips[:5]
+```
 
 ## Weather
 
+```SQL
 %bq query
 SELECT * FROM `bigquery-public-data.noaa_gsod.stations`
 WHERE state = 'NY' AND wban != '99999' AND name LIKE '%LA GUARDIA%'
@@ -181,7 +185,9 @@ SELECT EXTRACT (DAYOFYEAR FROM CAST(CONCAT(@YEAR,'-',mo,'-',da) AS TIMESTAMP)) A
 FROM `bigquery-public-data.noaa_gsod.gsod*`
 WHERE stn='725030' AND _TABLE_SUFFIX = @YEAR
 GROUP BY 1 ORDER BY daynumber DESC
+```
 
+```python
 query_parameters = [
   {
     'name': 'YEAR',
@@ -191,9 +197,13 @@ query_parameters = [
 ]
 weather = wxquery.execute(query_params=query_parameters).result().to_dataframe()
 weather[:5]
+```
 
+
+
+
+```python
 ## Merge datasets with Pandas
-
 data = pd.merge(weather, trips, on='daynumber')
 data[:5]
 
@@ -246,7 +256,9 @@ estimator.fit(input_fn=lambda: input_fn(predictors[:trainsize], targets[:trainsi
 pred = np.multiply(list(estimator.predict(predictors[trainsize:].values)), SCALE_NUM_TRIPS )
 rmse = np.sqrt(np.mean(np.power((targets[trainsize:].values - pred), 2)))
 print('LinearRegression has RMSE of {0}'.format(rmse))
+```
 
+```python
 ### Neural network
 
 SCALE_NUM_TRIPS = 600000.0
