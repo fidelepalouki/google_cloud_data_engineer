@@ -73,10 +73,7 @@ GROUP BY f.airline
 
 Elle est dans une dynamique de victoire, elle n'a pas envie de s'associer à une spirale de défaite, haha Cyril
 
-# Dataflow
-
-- No-ops data pipeline for reliable, scalable data processing. (On batch or stream data)
-- Java or Python
+## Exploring BigQuery
 
 ```SQL
 SELECT
@@ -205,18 +202,188 @@ ORDER BY
   frac_delayed ASC
 ```
 
-```SQL
+## Loading data into BigQuery
 
+Cloud shell
+
+```bash
+curl https://storage.googleapis.com/cloud-training/CPB200/BQ/lab4/schema_flight_performance.json -o schema_flight_performance.json
 ```
 
-```SQL
+Create a table named flights_2014 in the cpb101_flight_data dataset
 
+```bash
+bq load --source_format=NEWLINE_DELIMITED_JSON $DEVSHELL_PROJECT_ID:cpb101_flight_data.flights_2014 gs://cloud-training/CPB200/BQ/lab4/domestic_2014_flights_*.json ./schema_flight_performance.json
 ```
 
-```SQL
-
+```bash
+bq ls $DEVSHELL_PROJECT_ID:cpb101_flight_data
 ```
 
-```SQL
+Use the cli to extract the table
 
+```bash
+bq extract cpb101_flight_data.AIRPORTS gs://$BUCKET/bq/airports2.csv
 ```
+
+Advanced capabilities
+
+Data types: STRING, INT64, FLOAT64, BOOL, ARRAY, STRUCT, TIMESTAMP
+
+```SQL
+WITH WashingtonStations AS (
+  SELECT
+    weather.stn AS station_id,
+    ANY_VALUE(station.name) AS name
+  FROM
+    `bigquery-public-data.noaa_gsod.stations` AS stations
+  INNER JOIN
+    `bigquery-public-data.noaa_gsod.gsod2015` AS weather
+  ON
+    station.usaf = weather.stn
+  WHERE
+    station.state = 'WA'
+    AND station.usaf != '999999'
+  GROUP BY
+    station_id
+)
+
+SELECT washington_stations.name,
+  (
+    SELECT COUNT(*)
+    FROM `bigquery-public-data.noaa_gsod.gsod2015` AS weather
+    WHERE washington_stations.station_id = weather.stn
+    AND prcp > 0 AND prcp < 99
+  ) AS rainy_days
+FROM WashingtonStations AS washington_stations
+ORDER BY rainy_days DESC;
+```
+
+Use of Structs
+
+```SQL
+WITH TitlesAndScores AS (
+  SELECT
+    ARRAY_AGG(STRUCT(title, score)) AS titles,
+    EXTRACT(DATE FROM time_ts) AS date
+  FROM
+    `bigquery-public-data.hacker_news.stories`
+  WHERE
+    score IS NOT NULL
+    AND title IS NOT NULL
+  GROUP BY date
+)
+
+SELECT date,
+  ARRAY(SELECT AS STRUCT title, score
+        FROM UNNEST(titles) ORDER BY score DESC
+        LIMIT 2) AS top_articles
+FROM TitlesAndScores;
+```
+
+Join condition and Window condition
+
+```SQL
+WITH TopNames AS (
+  SELECT
+    name, SUM(number) AS occurences,
+  FROM
+    `bigquery-public-data.usa_names.usa_1910_2013`
+  GROUP BY name
+  ORDER BY occurences DESC LIMIT 100
+)
+
+SELECT name,
+  SUM(word_count) AS frequency
+FROM TopNames
+JOIN `bigquery-public-data.samples.shakespeare`
+ON STARTS_WITH(word, name)
+GROUP BY name
+ORDER BY frequency DESC LIMIT 10;
+```
+
+Standard SQL functions
+
+- Aggregate functions
+- String functions
+- Analytic (window) functions
+- Datetime functions
+- Array functions
+- Other functions and operators
+
+String function example (Regex)
+
+```SQL
+SELECT word, COUNT(word) as count
+FROM `bigquery-public-data.samples.shakespeare`
+WHERE (
+  REGEXP_CONTAINS(word, r"^\w\w'\w\w")
+)
+GROUP BY word
+ORDER BY count DESC
+LIMIT 3
+```
+
+Analytical window functions
+
+- Standard aggregations
+  - SUM, AVG, MIN, MAX, COUNT, ...
+- Navigation functions
+  - LEAD() - Returns the value of a row n rows ahead of the current row
+  - LAG() - Return the value of a row n rows behind the current row
+  - NTH_VALUE() - Returns the value of the nth row in the window
+- Ranking and numbering functions
+  - CUME_DIST() - Returns the cumulative distribution of a value in a group
+  - DENSE_RANK() - Returns the integer rank of a value in a group
+  - ROW_NUMBER() - Returns the current row number in the query result
+  - RANK() - Returns the integer rank of a value in a group of values
+  - PERCENT_RANK() - Returns the rank of the current row, relative to the other rows in the partition
+
+Window funtion example
+
+```SQL
+SELECT
+  corpus,
+  word,
+  word_count,
+  RANK() OVER (
+    PARTITION BY corpus
+    ORDER BY word_count DESC
+  ) rank,
+FROM `bigquery-public-data.samples.shakespeare`
+WHERE
+  length(word) > 10 AND word_count > 10
+LIMIT 40
+```
+
+Date functions
+
+- DATE(year, month, day)
+- DATE(timestamp)
+- DATETIME(date, time)
+
+Bigquery supports User-defined functions, allow functionality not supported by standard SQL
+
+```SQL
+  CREATE TEMPORARY FUNCTION
+    addFourAndDivide(x INT64, y INT64)
+    AS ((x + 4) / y);
+
+  WITH numbers AS (
+    SELECT 1 as val
+    UNION ALL
+    SELECT 3 as val
+    UNION ALL
+    SELECT 4 as val
+    UNION ALL
+    SELECT 5 as val
+  )
+
+  SELECT val, addFourAndDivide(val, 2) AS result
+  FROM numbers;
+```
+
+# Dataflow
+
+- No-ops data pipeline for reliable, scalable data processing. (On batch or stream data)
+- Java or Python

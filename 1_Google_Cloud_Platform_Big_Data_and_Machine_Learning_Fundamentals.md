@@ -78,7 +78,6 @@ CREATE TABLE IF NOT EXISTS Accommodation
   type varchar(255),
   PRIMARY KEY (ID)
 );
-);
 
 CREATE TABLE  IF NOT EXISTS Rating
 (
@@ -108,8 +107,8 @@ select * from Accommodation where type = 'castle' and price < 1500;
 
 ## Managed Hadoop in the cloud
 - Hadoop
-- Pig
 - Hive
+- Pig
 - Spark
 
 ## Kubernetes best practices
