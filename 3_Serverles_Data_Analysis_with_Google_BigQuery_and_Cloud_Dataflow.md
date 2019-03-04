@@ -8,7 +8,7 @@
 * Is a columnar database
 * To reduce costs => limit the number of columns on which we do our queries
 
-Example
+### Example
 
 ```SQL
 SELECT
@@ -24,7 +24,7 @@ GROUP BY
   airline, departure_airport
 ```
 
-Can query from multiple tables
+### Can query from multiple tables
 
 ```SQL
 SELECT
@@ -47,7 +47,7 @@ TABLE_DATE_RANGE(myproject-1234:applogs.events_,
   TIMESTAMP('20120501'))
 ```
 
-Join on fiels accross tables
+### Join on fiels accross tables
 
 ```SQL
 SELECT
@@ -89,7 +89,7 @@ LIMIT
   100
 ```
 
-Aggregate and Boolean functions
+### Aggregate and Boolean functions
 
 ```SQL
 SELECT
@@ -120,7 +120,7 @@ GROUP BY
 ORDER BY airline
 ```
 
-Get both the number of flights delayed and the total number of flights in a single quer
+### Get both the number of flights delayed and the total number of flights in a single quer
 
 ```SQL
 SELECT
@@ -135,7 +135,7 @@ GROUP BY
   f.airline
 ```
 
-String operations
+### String operations
 
 ```SQL
 SELECT
@@ -147,7 +147,7 @@ WHERE
   AND total_precipitation > 0
 ```
 
-Join on Date
+### Join on Date
 
 ```SQL
 SELECT
@@ -170,7 +170,7 @@ WHERE f.arrival_airport = 'LGA'
 GROUP BY f.airline
 ```
 
-Subquery
+### Subquery
 
 ```SQL
 SELECT
@@ -204,13 +204,13 @@ ORDER BY
 
 ## Loading data into BigQuery
 
-Cloud shell
+### Cloud shell
 
 ```bash
 curl https://storage.googleapis.com/cloud-training/CPB200/BQ/lab4/schema_flight_performance.json -o schema_flight_performance.json
 ```
 
-Create a table named flights_2014 in the cpb101_flight_data dataset
+### Create a table named flights_2014 in the cpb101_flight_data dataset
 
 ```bash
 bq load --source_format=NEWLINE_DELIMITED_JSON $DEVSHELL_PROJECT_ID:cpb101_flight_data.flights_2014 gs://cloud-training/CPB200/BQ/lab4/domestic_2014_flights_*.json ./schema_flight_performance.json
@@ -220,13 +220,13 @@ bq load --source_format=NEWLINE_DELIMITED_JSON $DEVSHELL_PROJECT_ID:cpb101_fligh
 bq ls $DEVSHELL_PROJECT_ID:cpb101_flight_data
 ```
 
-Use the cli to extract the table
+### Use the cli to extract the table
 
 ```bash
 bq extract cpb101_flight_data.AIRPORTS gs://$BUCKET/bq/airports2.csv
 ```
 
-Advanced capabilities
+## Advanced capabilities
 
 Data types: STRING, INT64, FLOAT64, BOOL, ARRAY, STRUCT, TIMESTAMP
 
@@ -259,7 +259,7 @@ FROM WashingtonStations AS washington_stations
 ORDER BY rainy_days DESC;
 ```
 
-Use of Structs
+### Use of Structs
 
 ```SQL
 WITH TitlesAndScores AS (
@@ -281,7 +281,7 @@ SELECT date,
 FROM TitlesAndScores;
 ```
 
-Join condition and Window condition
+### Join condition and Window condition
 
 ```SQL
 WITH TopNames AS (
@@ -302,7 +302,7 @@ GROUP BY name
 ORDER BY frequency DESC LIMIT 10;
 ```
 
-Standard SQL functions
+### Standard SQL functions
 
 - Aggregate functions
 - String functions
@@ -324,7 +324,7 @@ ORDER BY count DESC
 LIMIT 3
 ```
 
-Analytical window functions
+### Analytical window functions
 
 - Standard aggregations
   - SUM, AVG, MIN, MAX, COUNT, ...
@@ -339,7 +339,7 @@ Analytical window functions
   - RANK() - Returns the integer rank of a value in a group of values
   - PERCENT_RANK() - Returns the rank of the current row, relative to the other rows in the partition
 
-Window funtion example
+### Window funtion example
 
 ```SQL
 SELECT
@@ -356,13 +356,13 @@ WHERE
 LIMIT 40
 ```
 
-Date functions
+### Date functions
 
 - DATE(year, month, day)
 - DATE(timestamp)
 - DATETIME(date, time)
 
-Bigquery supports User-defined functions, allow functionality not supported by standard SQL
+### Bigquery supports User-defined functions, allow functionality not supported by standard SQL
 
 ```SQL
   CREATE TEMPORARY FUNCTION
