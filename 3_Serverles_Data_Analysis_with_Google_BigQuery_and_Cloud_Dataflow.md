@@ -327,7 +327,7 @@ LIMIT 3
 ### Analytical window functions
 
 - Standard aggregations
-  - SUM, AVG, MIN, MAX, COUNT, ...
+  - SUM(), AVG(), MIN(), MAX(), COUNT(), ...
 - Navigation functions
   - LEAD() - Returns the value of a row n rows ahead of the current row
   - LAG() - Return the value of a row n rows behind the current row
@@ -381,6 +381,163 @@ LIMIT 40
 
   SELECT val, addFourAndDivide(val, 2) AS result
   FROM numbers;
+```
+
+What is is the most popular programming language used on Github during weekends ?
+
+#### Information about code commits
+
+```SQL
+SELECT
+  author.email,
+  diff.new_path AS path,
+  author.date
+FROM
+  `bigquery-public-data.github_repos.commits`,
+  UNNEST(difference) diff
+WHERE
+  EXTRACT(YEAR
+  FROM
+    author.date)=2016
+LIMIT 10
+```
+
+#### Extract programming language
+
+```SQL
+SELECT
+  author.email,
+  LOWER(REGEXP_EXTRACT(diff.new_path, r'\.([^\./\(~_ \- #]*)$')) lang,
+  diff.new_path AS path,
+  author.date
+FROM
+  `bigquery-public-data.github_repos.commits`,
+  UNNEST(difference) diff
+WHERE
+  EXTRACT(YEAR
+  FROM
+    author.date)=2016
+LIMIT
+  10
+```
+
+#### Group by language by desc order
+
+```SQL
+WITH
+  commits AS (
+  SELECT
+    author.email,
+    LOWER(REGEXP_EXTRACT(diff.new_path, r'\.([^\./\(~_ \- #]*)$')) lang,
+    diff.new_path AS path,
+    author.date
+  FROM
+    `bigquery-public-data.github_repos.commits`,
+    UNNEST(difference) diff
+  WHERE
+    EXTRACT(YEAR
+    FROM
+      author.date)=2016 )
+SELECT
+  lang,
+  COUNT(path) AS numcommits
+FROM
+  commits
+WHERE
+  LENGTH(lang)<8
+  AND lang IS NOT NULL
+  AND REGEXP_CONTAINS(lang, '[a-zA-Z]')
+GROUP BY
+  lang
+HAVING
+  numcommits > 100
+ORDER BY
+  numcommits DESC
+```
+
+#### Weekend or Weekday
+
+```SQL
+WITH
+  commits AS (
+  SELECT
+    author.email,
+    EXTRACT(DAYOFWEEK
+    FROM
+      author.date) BETWEEN 2
+    AND 6 is_weekday,
+    LOWER(REGEXP_EXTRACT(diff.new_path, r'\.([^\./\(~_ \- #]*)$')) lang,
+    diff.new_path AS path,
+    author.date
+  FROM
+    `bigquery-public-data.github_repos.commits`,
+    UNNEST(difference) diff
+  WHERE
+    EXTRACT(YEAR
+    FROM
+      author.date)=2016)
+SELECT
+  lang,
+  is_weekday,
+  COUNT(path) AS numcommits
+FROM
+  commits
+WHERE
+  lang IS NOT NULL
+GROUP BY
+  lang,
+  is_weekday
+HAVING
+  numcommits > 100
+ORDER BY
+  numcommits DESC
+```
+
+## [Lak medium article](https://medium.freecodecamp.org/exploring-a-powerful-sql-pattern-array-agg-struct-and-unnest-b7dcc6263e36)
+
+```SQL
+#standardsql
+WITH hurricanes AS (
+SELECT
+  MIN(NAME) AS name,
+  ARRAY_AGG(STRUCT(iso_time, latitude, longitude, usa_sshs) ORDER BY iso_time ASC) AS track
+FROM
+  `bigquery-public-data.noaa_hurricanes.hurricanes`
+WHERE
+  season = '2010' AND basin = 'NA'
+GROUP BY
+  sid
+),
+
+cat_hurricane AS (
+SELECT name, track, (SELECT MAX(usa_sshs) FROM UNNEST(track))  AS category
+from hurricanes
+ORDER BY category DESC
+)
+
+SELECT
+  name,
+  category,
+  (SELECT AS STRUCT iso_time, latitude, longitude
+   FROM UNNEST(track)
+   WHERE usa_sshs = category ORDER BY iso_time LIMIT 1).*
+FROM cat_hurricane
+ORDER BY category DESC, name ASC
+```
+
+An other solution in the comments
+
+```SQL
+SELECT
+ MIN(NAME) AS name,
+ ARRAY_AGG(STRUCT(usa_sshs as category, iso_time, latitude, longitude) ORDER BY usa_sshs desc, iso_time ASC)[ordinal(1)] as track
+FROM
+ `bigquery-public-data.noaa_hurricanes.hurricanes`
+WHERE
+ season = ‘2010’ AND basin = ‘NA’
+GROUP BY
+ sid
+ORDER BY track.category DESC, name ASC
 ```
 
 # Dataflow
