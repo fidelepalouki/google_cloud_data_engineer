@@ -1,7 +1,7 @@
 # What is Machine Learning ?
 
 - Supervised learning
-  - Regression ((R)MSE: (root) mean squared error, )
+  - Regression ((R)MSE: (root) mean squared error)
   - Classification (Cross entropy: to optimize classification models) & (Confusion matrix: to describe the performance of classification models)
 - Unsupervised learning
 
@@ -314,65 +314,584 @@ df_valid = client.query(query).to_dataframe()
 print_rmse(df_valid, 2.56, 'Final Validation Set')
 ```
 
+#### What we just did:
+
+- Explore
+- Create datasets (training data, validation data, test data)
+- Benchmark
+
+## Tensorflow
+
+- Create the graph
+- Run the graph
+
+Minimizes the tensorflow C++ context switches for efficient computation
+
+### Getting started with Tensorflow
+
+```bash
+%bash
+git clone https://github.com/GoogleCloudPlatform/training-data-analyst
+cd training-data-analyst
+```
+
+```python
+import tensorflow as tf
+import numpy as np
+
+print(tf.__version__)
+```
+
+#### Ading two tensors
+
+- Numpy
+
+```python
+a = np.array([5, 3, 8])
+b = np.array([3, -1, 2])
+c = np.add(a, b)
+print(c)
+```
+
+- Graphs with Tensorflow
+
+```python
+a = tf.constant([5, 3, 8])
+b = tf.constant([3, -1, 2])
+c = tf.add(a, b)
+print(c)
+```
+
+#### Run the graph
+
+```python
+with tf.Session() as sess:
+  result = sess.run(c)
+  print(result)
+```
+
+#### Using feed_dict
+
+```python
+a = tf.placeholder(dtype=tf.int32, shape=(None,))  # batchsize x scalar
+b = tf.placeholder(dtype=tf.int32, shape=(None,))
+c = tf.add(a, b)
+with tf.Session() as sess:
+  result = sess.run(c, feed_dict={
+      a: [3, 4, 5],
+      b: [-1, 2, 3]
+    })
+  print(result)
+```
+
+#### Heron formula in Tensorflow
+
+The area of triangle whose three sides are $(a, b, c)$ is $\sqrt{s(s-a)(s-b)(s-c)}$ where $s=\frac{a+b+c}{2}$
+
+```python
+def compute_area(sides):
+  # slice the input to get the sides
+  a = sides[:,0]  # 5.0, 2.3
+  b = sides[:,1]  # 3.0, 4.1
+  c = sides[:,2]  # 7.1, 4.8
+
+  # Heron's formula
+  s = (a + b + c) * 0.5   # (a + b) is a short-cut to tf.add(a, b)
+  areasq = s * (s - a) * (s - b) * (s - c) # (a * b) is a short-cut to tf.multiply(a, b), not tf.matmul(a, b)
+  return tf.sqrt(areasq)
+
+with tf.Session() as sess:
+  # pass in two triangles
+  area = compute_area(tf.constant([
+      [5.0, 3.0, 7.1],
+      [2.3, 4.1, 4.8]
+    ]))
+  result = sess.run(area)
+  print(result)
+```
+
+#### Placeholder and feed_dict
+
+```python
+with tf.Session() as sess:
+  sides = tf.placeholder(tf.float32, shape=(None, 3))  # batchsize number of triangles, 3 sides
+  area = compute_area(sides)
+  result = sess.run(area, feed_dict = {
+      sides: [
+        [5.0, 3.0, 7.1],
+        [2.3, 4.1, 4.8]
+      ]
+    })
+  print(result)
+```
+
+#### Eager mode evealuation
+
+```python
+import tensorflow as tf
+from tensorflow.contrib.eager.python import tfe
+
+tfe.enable_eager_execution()
+
+def compute_area(sides):
+  # slice the input to get the sides
+  a = sides[:,0]  # 5.0, 2.3
+  b = sides[:,1]  # 3.0, 4.1
+  c = sides[:,2]  # 7.1, 4.8
+
+  # Heron's formula
+  s = (a + b + c) * 0.5   # (a + b) is a short-cut to tf.add(a, b)
+  areasq = s * (s - a) * (s - b) * (s - c) # (a * b) is a short-cut to tf.multiply(a, b), not tf.matmul(a, b)
+  return tf.sqrt(areasq)
+
+area = compute_area(tf.constant([
+      [5.0, 3.0, 7.1],
+      [2.3, 4.1, 4.8]
+    ]))
+
+print(area)
+```
+
+### Tensorflow Estimator
+
+```bash
+%bash
+git clone https://github.com/GoogleCloudPlatform/training-data-analyst
+cd training-data-analyst
+```
+
+```python
+import datalab.bigquery as bq
+import tensorflow as tf
+import pandas as pd
+import numpy as np
+import shutil
+
+print(tf.__version__)
+```
+
+```python
+# In CSV, label is the first column, after the features, followed by the key
+CSV_COLUMNS = ['fare_amount', 'pickuplon','pickuplat','dropofflon','dropofflat','passengers', 'key']
+FEATURES = CSV_COLUMNS[1:len(CSV_COLUMNS) - 1]
+LABEL = CSV_COLUMNS[0]
+
+df_train = pd.read_csv('./taxi-train.csv', header = None, names = CSV_COLUMNS)
+df_valid = pd.read_csv('./taxi-valid.csv', header = None, names = CSV_COLUMNS)
+```
+
+#### Making input
+
+```python
+def make_input_fn(df, num_epochs):
+  return tf.estimator.inputs.pandas_input_fn(
+    x = df,
+    y = df[LABEL],
+    batch_size = 128,
+    num_epochs = num_epochs,
+    shuffle = True,
+    queue_capacity = 1000,
+    num_threads = 1
+  )
+```
+
+#### Create feature columns for estimator
+
+```python
+def make_feature_cols():
+  input_columns = [tf.feature_column.numeric_column(k) for k in FEATURES]
+  return input_columns
+```
+
+#### Linear Regression with tf.Estimator framework
+
+```python
+tf.logging.set_verbosity(tf.logging.INFO)
+
+OUTDIR = 'taxi_trained'
+shutil.rmtree(OUTDIR, ignore_errors = True) # start fresh each time
+
+model = tf.estimator.LinearRegressor(
+      feature_columns = make_feature_cols(), model_dir = OUTDIR)
+
+model.train(input_fn = make_input_fn(df_train, num_epochs = 10))
+```
+
+#### Evaluate on the validation data
+
+```python
+def print_rmse(model, name, df):
+  metrics = model.evaluate(input_fn = make_input_fn(df, 1))
+  print('RMSE on {} dataset = {}'.format(name, np.sqrt(metrics['average_loss'])))
+print_rmse(model, 'validation', df_valid)
+```
+
+#### rmse = 9 worse than the benchmark 6. Let's use the model for prediction
+
+```python
+import itertools
+# Read saved model and use it for prediction
+model = tf.estimator.LinearRegressor(
+      feature_columns = make_feature_cols(), model_dir = OUTDIR)
+preds_iter = model.predict(input_fn = make_input_fn(df_valid, 1))
+print([pred['predictions'][0] for pred in list(itertools.islice(preds_iter, 5))])
+```
+
+#### Same value for every trip. Let's try a more complex model (DNNRegressor)
+
+```python
+tf.logging.set_verbosity(tf.logging.INFO)
+shutil.rmtree(OUTDIR, ignore_errors = True) # start fresh each time
+model = tf.estimator.DNNRegressor(hidden_units = [32, 8, 2],
+      feature_columns = make_feature_cols(), model_dir = OUTDIR)
+model.train(input_fn = make_input_fn(df_train, num_epochs = 100));
+print_rmse(model, 'validation', df_valid)
+```
+
+#### rmse=11, even worse
+
+#### Let's do a benchmark on the test dataset, with our best model so far (LinearRegressor)
+
+```python
+import datalab.bigquery as bq
+import numpy as np
+import pandas as pd
+
+def create_query(phase, EVERY_N):
+  """
+  phase: 1 = train 2 = valid
+  """
+  base_query = """
+SELECT
+  (tolls_amount + fare_amount) AS fare_amount,
+  CONCAT(STRING(pickup_datetime), STRING(pickup_longitude), STRING(pickup_latitude), STRING(dropoff_latitude), STRING(dropoff_longitude)) AS key,
+  DAYOFWEEK(pickup_datetime)*1.0 AS dayofweek,
+  HOUR(pickup_datetime)*1.0 AS hourofday,
+  pickup_longitude AS pickuplon,
+  pickup_latitude AS pickuplat,
+  dropoff_longitude AS dropofflon,
+  dropoff_latitude AS dropofflat,
+  passenger_count*1.0 AS passengers,
+FROM
+  [nyc-tlc:yellow.trips]
+WHERE
+  trip_distance > 0
+  AND fare_amount >= 2.5
+  AND pickup_longitude > -78
+  AND pickup_longitude < -70
+  AND dropoff_longitude > -78
+  AND dropoff_longitude < -70
+  AND pickup_latitude > 37
+  AND pickup_latitude < 45
+  AND dropoff_latitude > 37
+  AND dropoff_latitude < 45
+  AND passenger_count > 0
+  """
+
+  if EVERY_N == None:
+    if phase < 2:
+      # Training
+      query = "{0} AND ABS(HASH(pickup_datetime)) % 4 < 2".format(base_query)
+    else:
+      # Validation
+      query = "{0} AND ABS(HASH(pickup_datetime)) % 4 == {1}".format(base_query, phase)
+  else:
+    query = "{0} AND ABS(HASH(pickup_datetime)) % {1} == {2}".format(base_query, EVERY_N, phase)
+
+  return query
+
+query = create_query(2, 100000)
+df = bq.Query(query).to_dataframe()
+```
+
+#### RMSE = 9.41, worse than the benchmark 6, and worse than our distance-based rule RMSE of 8.02
+
 ```python
 
 ```
 
+### Ways to build effective models
+
+- Big data (more data)
+- Feature engineering
+- Try different model architechtures
+
+### Refactor to add batching and feature-creation
+
+```python
+import datalab.bigquery as bq
+import tensorflow as tf
+import numpy as np
+import shutil
+import tensorflow as tf
+print(tf.__version__)
+```
+
+#### Refactor the input
+
+DEFAULTS are useful for:
+
+- Dealing with null fields
+- Infering the columns types
+
+```python
+CSV_COLUMNS = ['fare_amount', 'pickuplon','pickuplat','dropofflon','dropofflat','passengers', 'key']
+LABEL_COLUMN = 'fare_amount'
+DEFAULTS = [[0.0], [-74.0], [40.0], [-74.0], [40.7], [1.0], ['nokey']]
+
+def read_dataset(filename, mode, batch_size = 512):
+  def _input_fn():
+    def decode_csv(value_column):
+      columns = tf.decode_csv(value_column, record_defaults = DEFAULTS)
+      features = dict(zip(CSV_COLUMNS, columns))
+      label = features.pop(LABEL_COLUMN)
+      return features, label
+
+    # Create list of files that match pattern
+    file_list = tf.gfile.Glob(filename)
+
+    # Create dataset from file list
+    dataset = tf.data.TextLineDataset(file_list).map(decode_csv)
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        num_epochs = None # indefinitely
+        dataset = dataset.shuffle(buffer_size = 10 * batch_size)
+    else:
+        num_epochs = 1 # end-of-input after this
+
+    dataset = dataset.repeat(num_epochs).batch(batch_size)
+    return dataset.make_one_shot_iterator().get_next()
+  return _input_fn
+
+
+def get_train():
+  return read_dataset('./taxi-train.csv', mode = tf.estimator.ModeKeys.TRAIN)
+
+def get_valid():
+  return read_dataset('./taxi-valid.csv', mode = tf.estimator.ModeKeys.EVAL)
+
+def get_test():
+  return read_dataset('./taxi-test.csv', mode = tf.estimator.ModeKeys.EVAL)
+```
+
+#### Refactor the way features are created
+
+```python
+INPUT_COLUMNS = [
+    tf.feature_column.numeric_column('pickuplon'),
+    tf.feature_column.numeric_column('pickuplat'),
+    tf.feature_column.numeric_column('dropofflat'),
+    tf.feature_column.numeric_column('dropofflon'),
+    tf.feature_column.numeric_column('passengers'),
+]
+
+def add_more_features(feats):
+  # Nothing to add (yet!)
+  return feats
+
+feature_cols = add_more_features(INPUT_COLUMNS)
+```
+
+#### Create and train the model
+
+```python
+tf.logging.set_verbosity(tf.logging.INFO)
+OUTDIR = 'taxi_trained'
+shutil.rmtree(OUTDIR, ignore_errors = True) # start fresh each time
+model = tf.estimator.LinearRegressor(
+      feature_columns = feature_cols, model_dir = OUTDIR)
+model.train(input_fn = get_train(), steps = 100);  # TODO: change the name of input_fn as needed
+```
+
+#### Evaluate the model
+
+```python
+def print_rmse(model, name, input_fn):
+  metrics = model.evaluate(input_fn = input_fn, steps = 1)
+  print('RMSE on {} dataset = {}'.format(name, np.sqrt(metrics['average_loss'])))
+print_rmse(model, 'validation', get_valid())
+```
+
+####
+
 ```python
 
 ```
 
-```python
-
-```
+####
 
 ```python
 
 ```
 
-```python
-
-```
+####
 
 ```python
 
 ```
 
-```python
-
-```
+####
 
 ```python
 
 ```
 
-```python
-
-```
+####
 
 ```python
 
 ```
 
-```python
-
-```
+####
 
 ```python
 
 ```
 
-```python
-
-```
+####
 
 ```python
 
 ```
 
+####
+
 ```python
 
 ```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
+
+```python
+
+```
+
+####
 
 ```python
 
