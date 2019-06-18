@@ -142,7 +142,8 @@ pyspark
 ```python
 lines = sc.textFile("/sampledata/sherlock-holmes.txt")
 type(lines) # <class 'pyspark.rdd.RDD'>
-lines.count()lines.take(15)
+lines.count()
+lines.take(15)
 
 words = lines.flatMap(lambda x: x.split(' '))
 type(words) # <class 'pyspark.rdd.PipelinedRDD'>

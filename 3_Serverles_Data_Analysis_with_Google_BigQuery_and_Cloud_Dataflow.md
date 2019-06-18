@@ -120,7 +120,7 @@ GROUP BY
 ORDER BY airline
 ```
 
-### Get both the number of flights delayed and the total number of flights in a single quer
+### Get both the number of flights delayed and the total number of flights in a single query
 
 ```SQL
 SELECT
